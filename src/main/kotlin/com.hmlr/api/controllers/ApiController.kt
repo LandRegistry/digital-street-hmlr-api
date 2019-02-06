@@ -2,18 +2,15 @@ package com.hmlr.api.controllers
 
 import com.hmlr.api.common.VaultQueryHelperConsumer
 import com.hmlr.api.common.models.*
-import com.hmlr.api.keyutils.KeyUtils
 import com.hmlr.api.rpcClient.NodeRPCConnection
 import net.corda.core.node.services.IdentityService
 import net.corda.core.utilities.loggerFor
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import com.hmlr.states.InstructConveyancerState
-import com.hmlr.flows.InstructConveyancerFlow
 import com.hmlr.model.ChargeRestriction
 import com.hmlr.states.LandAgreementState
+import com.hmlr.states.PaymentConfirmationState
 import com.hmlr.states.ProposedChargesAndRestrictionsState
 
 
@@ -47,41 +44,6 @@ class ApiController(@Suppress("CanBeParameter") private val rpc: NodeRPCConnecti
             .toList())
 
     /**
-     * Instructs a conveyancer with details of a title
-     */
-    @PutMapping(value = "/instruct-conveyancer")
-    fun instructConveyancer(@RequestBody input: ConveyancerInstructionDTO): ResponseEntity<Any?> {
-        logger.info("PUT /instruct-conveyancer (${input.title_number} -> ${input.case_reference} @ ${input.conveyancer.organisation})")
-
-        val instructConveyancerState = input.run {
-            //Get conveyancer
-            val conveyancerParty = conveyancer.toWellKnownParty()
-                    ?: return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Conveyancer party is invalid.")
-
-            //Create state
-            InstructConveyancerState(
-                    title_number,
-                    case_reference,
-                    myIdentity,
-                    conveyancerParty,
-                    owner.toCustomParty(
-                            true,
-                            KeyUtils("keys.properties").readPublicKey("seller"),
-                            null
-                    )
-            )
-        }
-
-        //Start flow
-        return responseEntityFromFlowHandle {
-            it.startFlowDynamic(
-                    InstructConveyancerFlow::class.java,
-                    instructConveyancerState
-            )
-        }
-    }
-
-    /**
      * Gets a title's sales agreement
      */
     @GetMapping(value = "/titles/{title-number}/sales-agreement",
@@ -95,8 +57,13 @@ class ApiController(@Suppress("CanBeParameter") private val rpc: NodeRPCConnecti
             //Return 404 if null
             agreementStateAndInstant ?: return ResponseEntity.notFound().build()
 
+            //Get payment settler
+            val paymentStateAndInstants: List<StateAndInstant<PaymentConfirmationState>> = getStatesBy { it.state.data.titleID == titleNumber }
+            val referencedPaymentState = paymentStateAndInstants.first { it.state.landAgreementStateLinearId == agreementStateAndInstant.state.linearId.toString() }
+            val paymentSettler = referencedPaymentState.state.settlingParty
+
             //Build the DTO
-            val salesAgreementDTO = agreementStateAndInstant.state.toDTO(agreementStateAndInstant.instant?.toLocalDateTime())
+            val salesAgreementDTO = agreementStateAndInstant.state.toDTO(paymentSettler, agreementStateAndInstant.instant?.toLocalDateTime())
 
             //Return the DTO
             return ResponseEntity.ok().body(salesAgreementDTO)

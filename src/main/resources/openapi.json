@@ -171,61 +171,10 @@
           }
         }
       }
-    },
-    "/instruct-conveyancer": {
-      "put": {
-        "summary": "Instruct a conveyancer with the details of a title",
-        "operationId": "instruct_conveyancer",
-        "tags": [
-          "Conveyancer"
-        ],
-        "requestBody": {
-          "description": "Infomation about the conveyancer and the title owner",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConveyancerInstruction"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Expected response to a valid request."
-          },
-          "500": {
-            "$ref": "#/components/responses/500"
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "ConveyancerInstruction": {
-        "required": [
-          "title_number",
-          "case_reference",
-          "owner",
-          "conveyanner"
-        ],
-        "properties": {
-          "title_number": {
-            "$ref": "#/components/schemas/TitleTransfer/properties/title_number"
-          },
-          "case_reference": {
-            "type": "string",
-            "example": "ABCD123"
-          },
-          "owner": {
-            "$ref": "#/components/schemas/Owner"
-          },
-          "conveyancer": {
-            "$ref": "#/components/schemas/X500"
-          }
-        }
-      },
       "TitleTransfer": {
         "required": [
           "title_number",
@@ -360,7 +309,8 @@
           "deposit_currency_code",
           "balance",
           "balance_currency_code",
-          "guarantee"
+          "guarantee",
+          "payment_settler"
         ],
         "properties": {
           "buyer": {
@@ -427,6 +377,9 @@
             "pattern": "^[A-Z]{3}$",
             "example": "GBP",
             "readOnly": true
+          },
+          "payment_settler": {
+            "$ref": "#/components/schemas/X500"
           },
           "guarantee": {
             "type": "string",
