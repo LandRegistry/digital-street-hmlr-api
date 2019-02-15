@@ -49,6 +49,13 @@ class EventListenerRPC {
                     titleDTO.put("restrictions", state.restrictions.map { JSONObject(it.toDTO()) })
                     titleDTO.put("charges", state.charges.map { JSONObject(it.toDTO()) })
 
+                    if (state.lastSoldValue != null) {
+                        val priceDTO = JSONObject()
+                        priceDTO.put("amount", state.lastSoldValue!!.quantity)
+                        priceDTO.put("currency_code", state.lastSoldValue!!.token.currencyCode)
+                        titleDTO.put("price_history", priceDTO)
+                    }
+
                     val titleRequest = put("${System.getenv("TITLE_API_URL")}/titles/${state.titleID}", timeout = 15.0, data = titleDTO.toString(), headers = mapOf("Accept" to "application/json", "Content-Type" to "application/json"))
                     if (titleRequest.statusCode == 200) {
                         logger.info("${state.titleID} transfer to " +
